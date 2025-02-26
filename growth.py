@@ -34,7 +34,7 @@ def growth_a(ak,y,Tfs,iters=15):
   T = T0
   for i in range(iters-1):
     # integrand shape: y, y'', y' (latest to earliest)
-    T = T0 + 1.5*simpson((F[:,None,None]-F[None,:,None])*T0[:,:,None]*T[None]*(y[:,None,None]>=y[None,:,None])*(y[None,:,None]>=y[None,None])/np.sqrt(1.+y[None,:,None]),x=y,axis=1)
+    T = T0 + 1.5*simpson((F[:,None,None]-F[None,:,None])*T0[:,:,None]*T[None]*(y[:,None,None]>=y[None,:,None])*(y[None,:,None]>=y[None,None])*y[None,:,None]/np.sqrt(1.+y[None,:,None]),x=np.log(y),axis=1)
   return T
 
 def growth_b(ak,y,Tfs,iters=15):
@@ -70,7 +70,7 @@ def growth_b(ak,y,Tfs,iters=15):
   T = T0
   for i in range(iters-1):
     # integrand shape: y, y'', y' (latest to earliest)
-    T = T0 + 1.5*simpson(T0[:,:,None]*T[None]*(y[:,None,None]>=y[None,:,None])*(y[None,:,None]>=y[None,None])/np.sqrt(1.+y[None,:,None]),x=y,axis=1)
+    T = T0 + 1.5*simpson(T0[:,:,None]*T[None]*(y[:,None,None]>=y[None,:,None])*(y[None,:,None]>=y[None,None])*y[None,:,None]/np.sqrt(1.+y[None,:,None]),x=np.log(y),axis=1)
   return T
 
 def P_iso(ak,y,Tfs,iters=15):
@@ -102,7 +102,7 @@ def P_iso(ak,y,Tfs,iters=15):
   Tb = growth_b(ak,y,Tfs,iters=iters)
   
   # integrand shape: y, y' (latest to earliest)
-  return 1. + 3.*simpson(Ta*Tb*(y[:,None]>=y[None,:])/np.sqrt(1.+y[None,:]),x=y,axis=1)
+  return 1. + 3.*simpson(Ta*Tb*(y[:,None]>=y[None,:])*y[None,:]/np.sqrt(1.+y[None,:]),x=np.log(y),axis=1)
 
 def growth_ad(ak,y,Tfs,dlnDdlny0,iters=15):
   '''
