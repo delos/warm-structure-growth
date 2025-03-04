@@ -32,7 +32,7 @@ def growth_a(ak,y,Tfs,iters=15):
   
   # start iteration
   T = T0
-  for i in range(iters-1):
+  for i in range(iters):
     # integrand shape: y, y'', y' (latest to earliest)
     T = T0 + 1.5*simpson((F[:,None,None]-F[None,:,None])*T0[:,:,None]*T[None]*(y[:,None,None]>=y[None,:,None])*(y[None,:,None]>=y[None,None])*y[None,:,None]/np.sqrt(1.+y[None,:,None]),x=np.log(y),axis=1)
   return T
@@ -68,7 +68,7 @@ def growth_b(ak,y,Tfs,iters=15):
   
   # start iteration
   T = T0
-  for i in range(iters-1):
+  for i in range(iters):
     # integrand shape: y, y'', y' (latest to earliest)
     T = T0 + 1.5*simpson(T0[:,:,None]*T[None]*(y[:,None,None]>=y[None,:,None])*(y[None,:,None]>=y[None,None])*y[None,:,None]/np.sqrt(1.+y[None,:,None]),x=np.log(y),axis=1)
   return T
