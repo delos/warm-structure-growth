@@ -43,7 +43,7 @@ def growth(ak,y,Tfs,iters=15):
   Tb = Tb0
   integrand_facs = (y[:,None,None]>=y[None,:,None])*(y[None,:,None]>=y[None,None])*y[None,:,None]/np.sqrt(1.+y[None,:,None])
   for i in range(iters-1):
-    Tb = Tb0 + 1.5*simpson(Tb0[:,:,None]*Tb[None]*integrand_facs,x=np.log(y),axis=1)
+    Tb = Tb0 + 1.5*simpson(Tb[:,:,None]*Tb0[None]*integrand_facs,x=np.log(y),axis=1)
     
   # evaluate T^(a)
   Ta = Ta0 + 1.5*simpson(Tb[:,:,None]*Ta0[None]*integrand_facs,x=np.log(y),axis=1)
