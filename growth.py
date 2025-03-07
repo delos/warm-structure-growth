@@ -1,10 +1,10 @@
 import numpy as np
 from scipy.integrate import simpson
 
-def growth_a(ak,y,Tfs,iters=15):
+def growth(ak,y,Tfs,iters=15):
   '''
   
-  Evaluate T^(a)_k(y,y'), the "initial displacement" growth function.
+  Evaluate the growth functions T^(a)_k(y,y') and T^(b)_k(y,y').
   
   Parameters:
     
@@ -21,57 +21,34 @@ def growth_a(ak,y,Tfs,iters=15):
     
   Returns:
     
-    T^(a)_k(y,y'): 2-D array, y and y' are first and second axes, respectively.
+    T^(a)_k(y,y'): The "initial displacement" growth function.
+      2-D array, y and y' are first and second axes, respectively.
+        
+    T^(b)_k(y,y'): The "initial velocity" growth function.
+      2-D array, y and y' are first and second axes, respectively.
   
   '''
+  
   F = np.log(y/(1.+np.sqrt(1.+y))**2)
   
-  # shape: y, y' (latest to earliest)
-  T0 = Tfs(ak*(F[:,None]-F[None]))
-  np.fill_diagonal(T0,1.) # in case Tfs is not well behaved at 0
+  # prepare T^(a,0), T^(b,0)
+  # output shape: y, y' (latest to earliest)
+  Ta0 = np.tril(Tfs(ak*(F[:,None]-F[None])))
+  Tb0 = np.tril((F[:,None]-F[None])*Tfs(ak*(F[:,None]-F[None])))
+  np.fill_diagonal(Ta0,1.) # in case Tfs is not well behaved at 0
+  np.fill_diagonal(Tb0,0.) # in case Tfs is not well behaved at 0
   
-  # start iteration
-  T = T0
-  for i in range(iters):
-    # integrand shape: y, y'', y' (latest to earliest)
-    T = T0 + 1.5*simpson((F[:,None,None]-F[None,:,None])*T0[:,:,None]*T[None]*(y[:,None,None]>=y[None,:,None])*(y[None,:,None]>=y[None,None])*y[None,:,None]/np.sqrt(1.+y[None,:,None]),x=np.log(y),axis=1)
-  return T
-
-def growth_b(ak,y,Tfs,iters=15):
-  '''
-  
-  Evaluate T^(b)_k(y,y'), the "initial velocity" growth function.
-  
-  Parameters:
+  # start iteration for T^(b)
+  # integrand shape is y, y'', y' (latest to earliest)
+  Tb = Tb0
+  integrand_facs = (y[:,None,None]>=y[None,:,None])*(y[None,:,None]>=y[None,None])*y[None,:,None]/np.sqrt(1.+y[None,:,None])
+  for i in range(iters-1):
+    Tb = Tb0 + 1.5*simpson(Tb0[:,:,None]*Tb[None]*integrand_facs,x=np.log(y),axis=1)
     
-    ak: alpha_k = sqrt(2)*v_eq*k/k_eq, number.
-      Here v_eq is the characteristic velocity at a_eq.
-    
-    y: a/a_eq, 1-D array of time steps.
-    
-    Tfs: The "free streaming transfer function", which is the Fourier transform
-      of the velocity distribution in units of the characteristic velocity.
-      
-    iters: (optional, default 15) Depth of iterative evaluation, which sets how
-      precise the result will be.
-    
-  Returns:
-    
-    T^(b)_k(y,y'): 2-D array, y and y' are first and second axes, respectively.
+  # evaluate T^(a)
+  Ta = Ta0 + 1.5*simpson(Tb[:,:,None]*Ta0[None]*integrand_facs,x=np.log(y),axis=1)
   
-  '''
-  F = np.log(y/(1.+np.sqrt(1.+y))**2)
-  
-  # shape: y, y' (latest to earliest)
-  T0 = (F[:,None]-F[None])*Tfs(ak*(F[:,None]-F[None]))
-  np.fill_diagonal(T0,0.) # in case Tfs is not well behaved at 0
-  
-  # start iteration
-  T = T0
-  for i in range(iters):
-    # integrand shape: y, y'', y' (latest to earliest)
-    T = T0 + 1.5*simpson(T0[:,:,None]*T[None]*(y[:,None,None]>=y[None,:,None])*(y[None,:,None]>=y[None,None])*y[None,:,None]/np.sqrt(1.+y[None,:,None]),x=np.log(y),axis=1)
-  return T
+  return Ta, Tb
 
 def P_iso(ak,y,Tfs,iters=15):
   '''
@@ -98,8 +75,7 @@ def P_iso(ak,y,Tfs,iters=15):
   
   '''
   
-  Ta = growth_a(ak,y,Tfs,iters=iters)
-  Tb = growth_b(ak,y,Tfs,iters=iters)
+  Ta, Tb = growth(ak,y,Tfs,iters=iters)
   
   # integrand shape: y, y' (latest to earliest)
   return 1. + 3.*simpson(Ta*Tb*(y[:,None]>=y[None,:])*y[None,:]/np.sqrt(1.+y[None,:]),x=np.log(y),axis=1)
@@ -133,8 +109,7 @@ def growth_ad(ak,y,Tfs,dlnDdlny0,iters=15):
   
   '''
   
-  Ta = growth_a(ak,y,Tfs,iters=iters)
-  Tb = growth_b(ak,y,Tfs,iters=iters)
+  Ta, Tb = growth(ak,y,Tfs,iters=iters)
   
   return Ta[:,0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb[:,0]
 
