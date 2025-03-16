@@ -41,12 +41,12 @@ def growth(ak,y,Tfs,iters=15):
   # start iteration for T^(b)
   # integrand shape is y, y'', y' (latest to earliest)
   Tb = Tb0
-  integrand_facs = (y[:,None,None]>=y[None,:,None])*(y[None,:,None]>=y[None,None])*y[None,:,None]/np.sqrt(1.+y[None,:,None])
+  measure = y[None,:,None]/np.sqrt(1.+y[None,:,None])
   for i in range(iters-1):
-    Tb = Tb0 + 1.5*simpson(Tb[:,:,None]*Tb0[None]*integrand_facs,x=np.log(y),axis=1)
+    Tb = Tb0 + 1.5*simpson(Tb[:,:,None]*Tb0[None]*measure,x=np.log(y),axis=1)
     
   # evaluate T^(a)
-  Ta = Ta0 + 1.5*simpson(Tb[:,:,None]*Ta0[None]*integrand_facs,x=np.log(y),axis=1)
+  Ta = Ta0 + 1.5*simpson(Tb[:,:,None]*Ta0[None]*measure,x=np.log(y),axis=1)
   
   return Ta, Tb
 
@@ -78,7 +78,7 @@ def P_iso(ak,y,Tfs,iters=15):
   Ta, Tb = growth(ak,y,Tfs,iters=iters)
   
   # integrand shape: y, y' (latest to earliest)
-  return 1. + 3.*simpson(Ta*Tb*(y[:,None]>=y[None,:])*y[None,:]/np.sqrt(1.+y[None,:]),x=np.log(y),axis=1)
+  return 1. + 3.*simpson(Ta*Tb*y[None,:]/np.sqrt(1.+y[None,:]),x=np.log(y),axis=1)
 
 def growth_ad(ak,y,Tfs,dlnDdlny0,iters=15):
   '''
