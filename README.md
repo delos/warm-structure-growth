@@ -3,7 +3,7 @@ Code for evaluating growth functions and matter power spectra in cosmology, incl
 
 ## Content:
 
-The file [iterative.py](iterative.py) contains the iterative algorithms described in Appendix B of [Amin et al. (2025)](https://arxiv.org/abs/2503.20881). Example usage is also included.
+The file [iterative.py](iterative.py) contains the iterative algorithms described in Appendix B of [Amin et al. (2025)](https://arxiv.org/abs/2503.20881). Example usage is provided in [examples.py](examples.py).
 
 ## Requirements:
 
