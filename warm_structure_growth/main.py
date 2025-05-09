@@ -39,10 +39,10 @@ class Structure(object):
   
   Parameters:
     
-    a_initial: float
+    a_i: float
       Scale factor at which free streaming starts.
     
-    a_final: float
+    a_f: float
       Latest scale factor we will be interested in. Smaller values lead to
       faster evaluation. Will increase automatically as needed. Default is to
       set as needed.
@@ -50,7 +50,7 @@ class Structure(object):
     f: callable or tuple
       Velocity distribution, dN/d^3v. Does not need to be normalized. May be
       entered in two ways:
-      - As a table (v,f).
+      - As a table (v,f), where v and f are 1-D arrays.
       - As a callable, f(v). In this case maxf must also be specified.
     
     maxf: float
@@ -63,10 +63,10 @@ class Structure(object):
       specified, we assume that f is in terms of a dimensionless velocity, and
       then v_scale must be specified.
     
-    v_at_initial: bool
+    v_at_init: bool
       If True, velocities are specified (via f and v_scale) at the initial time
-      a_initial. Otherwise they are specified at matter-radiation equality.
-      Default is v_at_initial=False.
+      a_i. Otherwise they are specified at matter-radiation equality.
+      Default is v_at_init=False.
     
     a_eq, k_eq: floats
       Scale factor and horizon wavenumber at matter-radiation equality.
@@ -88,11 +88,11 @@ class Structure(object):
       Depth of iterative evaluation, which sets how precise the results will
       be. Default is iters=15.
   '''
-  def __init__(self,a_initial,a_final=None,f=None,maxf=None,v_scale=None,v_at_initial=False,a_eq=0.000295,k_eq=0.01,max_FT=100.,N_ft=1000,dlna=0.23,iters=15):
+  def __init__(self,a_i,a_f=None,f=None,maxf=None,v_scale=None,v_at_init=False,a_eq=0.000295,k_eq=0.01,max_FT=100.,N_ft=1000,dlna=0.23,iters=15):
     self.a_eq = a_eq
     self.k_eq = k_eq
-    self.a_initial = a_initial
-    self.a_final = a_final
+    self.a_i = a_i
+    self.a_f = a_f
     self.dlna = dlna
     self.iters = iters
     
@@ -101,8 +101,8 @@ class Structure(object):
     maxf = maxf or 30.
     v_scale = v_scale or 1.
     
-    if v_at_initial: # scale to a_eq
-      v_scale *= a_initial/a_eq
+    if v_at_init: # scale to a_eq
+      v_scale *= a_i/a_eq
     
     self.sigma = np.sqrt(moment_f(2,f,maxf=maxf)/(3*moment_f(0,f,maxf=maxf)))
     self.__x = np.geomspace(1./max_FT,max_FT,N_ft)/self.sigma
@@ -118,14 +118,14 @@ class Structure(object):
     
     self.__k = None
   
-  def __generate_TaTb(self,k=None,a_final=None):
-    if a_final is not None:
-      self.a_final = a_final
+  def __generate_TaTb(self,k=None,a_f=None):
+    if a_f is not None:
+      self.a_f = a_f
     if k is not None:
       self.__k = k
       self.__alpha = np.sqrt(2)*k/self.k_eq
-    Na = int(np.round(np.log(self.a_final/self.a_initial)/self.dlna))
-    agrid = np.geomspace(self.a_initial,self.a_final,Na)
+    Na = int(np.round(np.log(self.a_f/self.a_i)/self.dlna))
+    agrid = np.geomspace(self.a_i,self.a_f,Na)
     self.__y = agrid/self.a_eq
     # k, y, and y' are first, second, and third axes, respectively
     self.__Ta, self.__Tb = np.zeros((len(self.__k),Na,Na)), np.zeros((len(self.__k),Na,Na))
@@ -169,8 +169,8 @@ class Structure(object):
     '''
     if k is None or (self.__k is not None and len(k) == len(self.__k) and np.allclose(np.sqrt(2)*k/self.k_eq,self.__alpha,atol=0.)):
       k = None
-    if a > self.a_final:
-      self.__generate_TaTb(k,a_final=a)
+    if a > self.a_f:
+      self.__generate_TaTb(k,a_f=a)
     elif k is not None:
       self.__generate_TaTb(k)
     return self.__y, self.__Ta_interp(a/self.a_eq), self.__Tb_interp(a/self.a_eq)
@@ -196,8 +196,8 @@ class Structure(object):
       Tb: 1-D array
         T^(b)_k(y,y') as a function of y'
     '''
-    if a > self.a_final:
-      self.__generate_TaTb(np.zeros(1),a_final=a)
+    if a > self.a_f:
+      self.__generate_TaTb(np.zeros(1),a_f=a)
     return self.__y, self.__Ta0_interp(a/self.a_eq), self.__Tb0_interp(a/self.a_eq)
     
   def P_iso(self,a,k=None):
@@ -245,7 +245,7 @@ class Structure(object):
       T^ad_k(y,y_0): 1-D array as a function of k.
     '''
     if dlnDdlny0 is None:
-      dlnDdlny0 = 1./np.log(np.sqrt(2)*0.47*(k if k is not None else self.__k)/self.k_eq*self.a_initial/self.a_eq)
+      dlnDdlny0 = 1./np.log(np.sqrt(2)*0.47*(k if k is not None else self.__k)/self.k_eq*self.a_i/self.a_eq)
     y, Ta, Tb = self.TaTb(k=k,a=a)
     return Ta[:,0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb[:,0]
   
@@ -274,7 +274,7 @@ class Structure(object):
       T^ad_k(y,y_0): 1-D array as a function of y.
     '''
     if dlnDdlny0 is None:
-      dlnDdlny0 = 1./np.log(np.sqrt(2)*0.47*(k if k is not None else self.__k)/self.k_eq*self.a_initial/self.a_eq)
+      dlnDdlny0 = 1./np.log(np.sqrt(2)*0.47*(k if k is not None else self.__k)/self.k_eq*self.a_i/self.a_eq)
     y, Ta, Tb = self.TaTb(k=k,a=a)
     y, Ta0, Tb0 = self.TaTb0(a=a)
     return (Ta[:,0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb[:,0])/(Ta0[0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb0[0])
