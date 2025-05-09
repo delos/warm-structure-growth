@@ -24,7 +24,7 @@ a_init = 3e-7 # scale factor at which we start nonrelativistic free streaming
 structure = warm_structure_growth.Structure(a_i=a_init,f=f,v_scale=v_eq)
 ```
 
-Note that the velocity distribution can also be specified as a table. See the docstring (`help(warm_structure_growth.Structure)` or in [main.py](warm_structure_growth/main.py)) for this and other options. Now we can evaluate the transfer function for adiabatic modes:
+Note that the velocity distribution can alternatively be supplied as a table and passed as `f=(v,f)`, where `v` and `f` are arrays. See the docstring (`help(warm_structure_growth.Structure)` or in [main.py](warm_structure_growth/main.py)) for further options. Now we can evaluate the transfer function for adiabatic modes:
 
 ```
 k = numpy.geomspace(1,1e4,30)
@@ -37,7 +37,7 @@ or the power spectrum of warm white noise:
 P = structure.P_iso(a=1,k) # this is n*P, where n is the number density
 ```
 
-Wavenumbers are in units of 1/Mpc by default, but this can be changed by specifying a custum `k_eq` when instantiating `warm_structure_growth.Structure`. The unit of `k` will be the same as the unit of `k_eq`.
+Wavenumbers are in units of 1/Mpc by default, but this can be changed by specifying a custom `k_eq` when instantiating `warm_structure_growth.Structure`. The unit of `k` will be the same as the unit of `k_eq`.
 
 ## Requirements:
 
