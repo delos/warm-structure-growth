@@ -17,7 +17,8 @@ import warm_structure_growth
 Now pick some parameters, for example:
 
 ```
-f = lambda v: np.exp(-v**2/2) # Maxwell-Boltzmann velocity distribution
+import numpy
+f = lambda v: numpy.exp(-v**2/2) # Maxwell-Boltzmann velocity distribution
 v_eq = 7e-5 # scale velocity at matter-radiation equality, in units of c
 a_init = 3e-7 # scale factor at which we start nonrelativistic free streaming
 structure = warm_structure_growth.Structure(a_i=a_init,f=f,v_scale=v_eq)
@@ -26,7 +27,6 @@ structure = warm_structure_growth.Structure(a_i=a_init,f=f,v_scale=v_eq)
 Note that the velocity distribution can also be specified as a table. See the docstring (`help(warm_structure_growth.Structure)` or in [main.py](warm_structure_growth/main.py)) for this and other options. Now we can evaluate the transfer function for adiabatic modes:
 
 ```
-import numpy
 k = numpy.geomspace(1,1e4,30)
 T = structure.cutoff_ad(a=1,k) # power spectrum will be scaled by T^2
 ```
