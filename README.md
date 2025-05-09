@@ -23,7 +23,7 @@ a_init = 3e-7 # scale factor at which we start nonrelativistic free streaming
 structure = warm_structure_growth.Structure(a_i=a_init,f=f,v_scale=v_eq)
 ```
 
-Note that the velocity distribution can also be specified as a table. See the docstring (`help(warm_structure_growth.Structure` or in [main.py](warm_structure_growth/main.py)) for this and other options. Now we can evaluate the transfer function for adiabatic modes:
+Note that the velocity distribution can also be specified as a table. See the docstring (`help(warm_structure_growth.Structure)` or in [main.py](warm_structure_growth/main.py)) for this and other options. Now we can evaluate the transfer function for adiabatic modes:
 
 ```
 import numpy
