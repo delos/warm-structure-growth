@@ -232,7 +232,11 @@ class Structure(object):
     if a > self.a_f:
       self.__generate_TaTb(np.zeros(1),a_f=a)
     return self.__y, self.__Ta0_interp(a/self.a_eq), self.__Tb0_interp(a/self.a_eq)
-    
+  
+  def k_J(self,a):
+    '''Jeans wavenumber at scale factor a during matter domination.'''
+    return np.sqrt(3*a/self.a_eq)/2. * self.k_eq / self.sigma
+  
   def P_iso(self,a,k=None):
     '''
     Evaluate n*P_iso(k), i.e. the white noise power spectrum in units of n^-1,
