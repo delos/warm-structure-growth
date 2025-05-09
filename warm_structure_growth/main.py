@@ -4,23 +4,23 @@ from scipy.interpolate import CubicSpline
 from time import process_time
 from . import iterative
 
-def moment_f(n,f,maxf=30.):
+def moment_f(n,f):
   '''n-th velocity moment of f(v), integral |v|^n f(v) d^3v'''
   if callable(f):
     integrand = lambda v: v**(2+n)*f(v)
-    vmax = maxf
+    vmax = np.inf
   else:
     interpolation = CubicSpline(f[0],f[1],bc_type='clamped',extrapolate=True)
     integrand = lambda v: v**(2+n)*interpolation(v)
     vmax = f[0][-1]
   return 4*np.pi*quad(integrand,0.,vmax,)[0]
 
-def fourier_f(x,f,maxf=30.):
+def fourier_f(x,f):
   '''Fourier transform of f(v) evaluated at points x'''
-  norm = moment_f(0,f,maxf=maxf)
+  norm = moment_f(0,f)
   if callable(f):
     integrand = lambda v: v*f(v)
-    vmax = maxf
+    vmax = np.inf
   else:
     interpolation = CubicSpline(f[0],f[1],bc_type='clamped',extrapolate=True)
     integrand = lambda v: v*interpolation(v)
@@ -33,23 +33,23 @@ def fourier_f(x,f,maxf=30.):
       out[i] = 4*np.pi/norm*quad(integrand,0.,vmax,weight='sin',wvar=x1)[0] / x1
   return out
 
-def moment_ff(n,u,f,maxf=30.):
+def moment_ff(n,u,f):
   '''n-th velocity moment of f(|v+u/2|)f(|v-u/2|)'''
   if callable(f):
     integrand = lambda v,mu: v**(2+n)*f(np.sqrt(v**2+u**2/4+mu*v*u))*f(np.sqrt(v**2+u**2/4-mu*v*u))
-    vmax = maxf
+    vmax = np.inf
   else:
     interpolation = CubicSpline(f[0],f[1],bc_type='clamped',extrapolate=True)
     integrand = lambda v,mu: v**(2+n)*interpolation(np.sqrt(v**2+u**2/4+mu*v*u))*interpolation(np.sqrt(v**2+u**2/4-mu*v*u))
     vmax = f[0][-1]
   return 2*np.pi*quad(lambda mu: quad(integrand,0.,vmax,args=(mu,))[0],-1.,1.)[0]
 
-def fourier_ff(x,u,f,maxf=30.):
+def fourier_ff(x,u,f):
   '''Fourier transform of f(|v+u/2|)f(|v-u/2|) evaluated at points x'''
-  norm = moment_ff(0,u,f,maxf=maxf)
+  norm = moment_ff(0,u,f)
   if callable(f):
     integrand = lambda v,mu: v**2*f(np.sqrt(v**2+u**2/4+mu*v*u))*f(np.sqrt(v**2+u**2/4-mu*v*u))
-    vmax = maxf
+    vmax = np.inf
   else:
     interpolation = CubicSpline(f[0],f[1],bc_type='clamped',extrapolate=True)
     integrand = lambda v,mu: v**2*interpolation(np.sqrt(v**2+u**2/4+mu*v*u))*interpolation(np.sqrt(v**2+u**2/4-mu*v*u))
@@ -81,17 +81,11 @@ class Structure(object):
       Velocity distribution, dN/d^3v. Does not need to be normalized. May be
       entered in two ways:
       - As a table (v,f), where v and f are 1-D arrays.
-      - As a callable, f(v). In this case maxf must also be specified.
-    
-    maxf: float
-      Maximum value of the argument of f that we need to consider. Only
-      relevant if f is a callable function. Default is maxf=30.
+      - As a callable, f(v).
     
     v_scale: float
       Rescale velocities so that the velocity distribution is f(v/v_scale).
-      Default is v_scale=1. If f is a callable function and maxf is not
-      specified, we assume that f is in terms of a dimensionless velocity, and
-      then v_scale must be specified.
+      Default is v_scale=1.
     
     v_at_init: bool
       If True, velocities are specified (via f and v_scale) at the initial time
@@ -121,7 +115,7 @@ class Structure(object):
     verbose: bool
       Default is True; set to False to disable messages.
   '''
-  def __init__(self,a_i,a_f=None,f=None,maxf=None,v_scale=None,v_at_init=False,a_eq=0.000295,k_eq=0.01,max_FT=100.,N_ft=1000,dlna=0.23,iters=15,verbose=True):
+  def __init__(self,a_i,a_f=None,f=None,v_scale=1.,v_at_init=False,a_eq=0.000295,k_eq=0.01,max_FT=100.,N_ft=1000,dlna=0.23,iters=15,verbose=True):
     self.a_eq = a_eq
     self.k_eq = k_eq
     self.a_i = a_i
@@ -130,22 +124,18 @@ class Structure(object):
     self.iters = iters
     self.verbose = verbose
     
-    if callable(f) and maxf is None and v_scale is None:
-      raise Exception('with callable f, we must have at least one of maxf and v_scale')
-    maxf = maxf or 30.
-    v_scale = v_scale or 1.
     if v_at_init: # scale to a_eq
       v_scale *= a_i/a_eq
     
-    self.__generate_FT(f,maxf,v_scale,max_FT,N_ft)
+    self.__generate_FT(f,v_scale,max_FT,N_ft)
     
     self.__k = None
   
-  def __generate_FT(self,f,maxf,v_scale,max_FT,N_ft):
+  def __generate_FT(self,f,v_scale,max_FT,N_ft):
     __t = process_time()
-    self.sigma = np.sqrt(moment_f(2,f,maxf=maxf)/(3*moment_f(0,f,maxf=maxf)))
+    self.sigma = np.sqrt(moment_f(2,f)/(3*moment_f(0,f)))
     self.__x = np.geomspace(1./max_FT,max_FT,N_ft)/self.sigma
-    self.__T = fourier_f(self.__x,f,maxf=30.)
+    self.__T = fourier_f(self.__x,f)
     
     if np.abs(self.__T[0]-1) > 1e-2 or np.abs(self.__T[-1]) > 1e-2:
       if self.verbose:
