@@ -37,6 +37,8 @@ or the power spectrum of warm white noise:
 P = structure.P_iso(a=1,k) # this is n*P, where n is the number density
 ```
 
+Wavenumbers are in units of 1/Mpc by default, but this can be changed by specifying a custum `k_eq` when instantiating `warm_structure_growth.Structure`. The unit of `k` will be the same as the unit of `k_eq`.
+
 ## Requirements:
 
 This code requires Python with the `numpy` and `scipy` packages.
