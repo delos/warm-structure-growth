@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.integrate import quad, simpson
 from scipy.interpolate import CubicSpline
+from time import process_time
 from . import iterative
 
 def moment_f(n,f,maxf=30.):
@@ -30,6 +31,35 @@ def fourier_f(x,f,maxf=30.):
       out[i] = 1.
     else:
       out[i] = 4*np.pi/norm*quad(integrand,0.,vmax,weight='sin',wvar=x1)[0] / x1
+  return out
+
+def moment_ff(n,u,f,maxf=30.):
+  '''n-th velocity moment of f(|v+u/2|)f(|v-u/2|)'''
+  if callable(f):
+    integrand = lambda v,mu: v**(2+n)*f(np.sqrt(v**2+u**2/4+mu*v*u))*f(np.sqrt(v**2+u**2/4-mu*v*u))
+    vmax = maxf
+  else:
+    interpolation = CubicSpline(f[0],f[1],bc_type='clamped',extrapolate=True)
+    integrand = lambda v,mu: v**(2+n)*interpolation(np.sqrt(v**2+u**2/4+mu*v*u))*interpolation(np.sqrt(v**2+u**2/4-mu*v*u))
+    vmax = f[0][-1]
+  return 2*np.pi*quad(lambda mu: quad(integrand,0.,vmax,args=(mu,))[0],-1.,1.)[0]
+
+def fourier_ff(x,u,f,maxf=30.):
+  '''Fourier transform of f(|v+u/2|)f(|v-u/2|) evaluated at points x'''
+  norm = moment_ff(0,u,f,maxf=maxf)
+  if callable(f):
+    integrand = lambda v,mu: v**2*f(np.sqrt(v**2+u**2/4+mu*v*u))*f(np.sqrt(v**2+u**2/4-mu*v*u))
+    vmax = maxf
+  else:
+    interpolation = CubicSpline(f[0],f[1],bc_type='clamped',extrapolate=True)
+    integrand = lambda v,mu: v**2*interpolation(np.sqrt(v**2+u**2/4+mu*v*u))*interpolation(np.sqrt(v**2+u**2/4-mu*v*u))
+    vmax = f[0][-1]
+  out = np.zeros_like(x)
+  for i,x1 in enumerate(x):
+    if x1 == 0:
+      out[i] = 1.
+    else:
+      out[i] = 2*np.pi/norm*quad(lambda mu: quad(integrand,0.,vmax,args=(mu,),weight='cos',wvar=mu*x1)[0],-1.,1.)[0]
   return out
 
 class Structure(object):
@@ -87,38 +117,49 @@ class Structure(object):
     iters: int
       Depth of iterative evaluation, which sets how precise the results will
       be. Default is iters=15.
+      
+    verbose: bool
+      Default is True; set to False to disable messages.
   '''
-  def __init__(self,a_i,a_f=None,f=None,maxf=None,v_scale=None,v_at_init=False,a_eq=0.000295,k_eq=0.01,max_FT=100.,N_ft=1000,dlna=0.23,iters=15):
+  def __init__(self,a_i,a_f=None,f=None,maxf=None,v_scale=None,v_at_init=False,a_eq=0.000295,k_eq=0.01,max_FT=100.,N_ft=1000,dlna=0.23,iters=15,verbose=True):
     self.a_eq = a_eq
     self.k_eq = k_eq
     self.a_i = a_i
     self.a_f = a_f
     self.dlna = dlna
     self.iters = iters
+    self.verbose = verbose
     
     if callable(f) and maxf is None and v_scale is None:
       raise Exception('with callable f, we must have at least one of maxf and v_scale')
     maxf = maxf or 30.
     v_scale = v_scale or 1.
-    
     if v_at_init: # scale to a_eq
       v_scale *= a_i/a_eq
     
+    self.__generate_FT(f,maxf,v_scale,max_FT,N_ft)
+    
+    self.__k = None
+  
+  def __generate_FT(self,f,maxf,v_scale,max_FT,N_ft):
+    __t = process_time()
     self.sigma = np.sqrt(moment_f(2,f,maxf=maxf)/(3*moment_f(0,f,maxf=maxf)))
     self.__x = np.geomspace(1./max_FT,max_FT,N_ft)/self.sigma
     self.__T = fourier_f(self.__x,f,maxf=30.)
     
     if np.abs(self.__T[0]-1) > 1e-2 or np.abs(self.__T[-1]) > 1e-2:
-      print('Warning: Fourier transformed f(v) ranges from %g to %g. Try increasing max_FT=%g.'%(self.__T[-1],self.__T[0],max_FT))
+      if self.verbose:
+        print('Warning: Fourier transformed f(v) ranges from %g to %g. Try increasing max_FT=%g.'%(self.__T[-1],self.__T[0],max_FT))
     
     self.sigma *= v_scale
     self.__x /= v_scale
     
-    self.__lnx = np.log(self.__x)
-    
-    self.__k = None
+    self.__T_interp = CubicSpline(self.__x,self.__T,bc_type='clamped')
+    if self.verbose:
+      print('Fourier transformed f(v) in %.2f sec'%(process_time()-__t))
   
   def __generate_TaTb(self,k=None,a_f=None):
+    __t = process_time()
     if a_f is not None:
       self.a_f = a_f
     if k is not None:
@@ -137,10 +178,12 @@ class Structure(object):
     self.__Ta0, self.__Tb0 = iterative.growth_functions(0.,self.__y,self.T,iters=self.iters)
     self.__Ta0_interp = CubicSpline(self.__y,self.__Ta0,axis=0)
     self.__Tb0_interp = CubicSpline(self.__y,self.__Tb0,axis=0)
+    if self.verbose:
+      print('Evaluated growth functions in %.2f sec'%(process_time()-__t))
   
   def T(self,x):
     '''Fourier transform of the velocity distribution'''
-    return np.interp(np.log(x),self.__lnx,self.__T,left=1.,right=0.)
+    return np.piecewise(x,[x<self.__x[0],x>self.__x[-1]],[1.,0.,self.__T_interp])
     
   def TaTb(self,a,k=None):
     '''
