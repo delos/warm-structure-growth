@@ -28,13 +28,13 @@ Note that the velocity distribution can alternatively be supplied as a table and
 
 ```
 k = numpy.geomspace(1,1e4,30)
-T = structure.cutoff_ad(a=1,k) # power spectrum will be scaled by T^2
+T = structure.cutoff_ad(a=1.,k=k) # power spectrum will be scaled by T^2
 ```
 
 or the power spectrum of warm white noise:
 
 ```
-P = structure.P_iso(a=1,k) # this is n*P, where n is the number density
+P = structure.P_iso(a=1.,k=k) # this is n*P, where n is the number density
 ```
 
 Wavenumbers are in units of 1/Mpc by default, but this can be changed by specifying a custom `k_eq` when instantiating `warm_structure_growth.Structure`. The unit of `k` will be the same as the unit of `k_eq`.
