@@ -202,7 +202,7 @@ class Structure(object):
     '''
     if k is None or (self.__k is not None and len(k) == len(self.__k) and np.allclose(np.sqrt(2)*k/self.k_eq,self.__alpha,atol=0.)):
       k = None
-    if a > self.a_f:
+    if self.a_f is None or a > self.a_f:
       self.__generate_TaTb(k,a_f=a)
     elif k is not None:
       self.__generate_TaTb(k)
@@ -229,7 +229,7 @@ class Structure(object):
       Tb: 1-D array
         T^(b)_k(y,y') as a function of y'
     '''
-    if a > self.a_f:
+    if self.a_f is None or a > self.a_f:
       self.__generate_TaTb(np.zeros(1),a_f=a)
     return self.__y, self.__Ta0_interp(a/self.a_eq), self.__Tb0_interp(a/self.a_eq)
   
