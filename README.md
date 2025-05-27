@@ -18,10 +18,11 @@ Now pick some parameters, for example:
 
 ```
 import numpy
-f = lambda v: numpy.exp(-v**2/2) # Maxwell-Boltzmann velocity distribution
-v_eq = 7e-5 # scale velocity at matter-radiation equality, in units of c
-a_init = 3e-7 # scale factor at which we start nonrelativistic free streaming
-structure = warm_structure_growth.Structure(a_i=a_init,f=f,v_scale=v_eq)
+structure = warm_structure_growth.Structure(
+    a_i = 3e-7, # scale factor at which we start nonrelativistic free streaming
+    f = lambda v: numpy.exp(-v**2/2), # Maxwell-Boltzmann velocity distribution
+    v_scale = 7e-5, # scale velocity at matter-radiation equality, in units of c
+    )
 ```
 
 Note that the velocity distribution can alternatively be supplied as a table and passed as `f=(v,f)`, where `v` and `f` are arrays. See the docstring (`help(warm_structure_growth.Structure)` or in [main.py](warm_structure_growth/main.py)) for further options. Now we can evaluate the transfer function for adiabatic modes:
