@@ -116,6 +116,11 @@ class Structure(object):
       white-noise calculation instead. If both m and k_scale are given, then
       v_scale (and v_at_init) will be ignored.
     
+    n: float
+      Number density of particles. Only relevant if m and k_scale are not
+      specified. Default is n=1, so that the isocurvature power spectrum is in
+      units of 1/n.
+    
     a_eq, k_eq: floats
       Scale factor and horizon wavenumber at matter-radiation equality.
       Defaults are a_eq=0.000295 and k_eq=0.01.
@@ -139,7 +144,7 @@ class Structure(object):
     verbose: bool
       Default is True; set to False to disable messages.
   '''
-  def __init__(self,a_i,a_f=None,f=None,v_scale=1.,v_at_init=False,m=None,k_scale=None,a_eq=0.000295,k_eq=0.01,max_FT=100.,N_ft=1000,dlna=0.23,iters=15,verbose=True):
+  def __init__(self,a_i,a_f=None,f=None,v_scale=1.,v_at_init=False,m=None,k_scale=None,n=1.,a_eq=0.000295,k_eq=0.01,max_FT=100.,N_ft=1000,dlna=0.23,iters=15,verbose=True):
     self.a_eq = a_eq
     self.k_eq = k_eq
     self.a_i = a_i
@@ -162,6 +167,8 @@ class Structure(object):
       if m is not None and k_scale is not None:
         self.v_scale = self.k_scale / (self.a_eq * self.m)
       self.__generate_FT_field(f,max_FT,N_ft)
+    
+    self.n = n
     
     self.__k = None
   
@@ -195,6 +202,7 @@ class Structure(object):
       self.sigma = np.sqrt(named_distributions[f]['moment_f'](2)/(3*named_distributions[f]['moment_f'](0)))
       self.__Tfs = lambda x: named_distributions[f]['fourier_f'](x*self.v_scale)
       self.__Tfs2 = lambda x,u: named_distributions[f]['fourier_ff'](x*self.v_scale,u/self.k_scale)
+      self.__P_iso = lambda u: named_distributions[f]['norm_ff'](u/self.k_scale)
       self.sigma *= self.v_scale
       if self.verbose:
         print('Using built-in f(v): %s (sigma_eq=%.3e)'%(f,self.sigma))
@@ -310,10 +318,28 @@ class Structure(object):
     '''Jeans wavenumber at scale factor a during matter domination.'''
     return np.sqrt(3*a/self.a_eq)/2. * self.k_eq / self.sigma
   
+  def P0_iso(self,k):
+    '''
+    Evaluate the white noise power spectrum prior to any gravitational growth.
+    
+    Parameters:
+      
+      k: array
+        Wavenumbers in the same units as k_eq.
+    
+    Returns:
+      
+      P: array
+        (Dimensionful) power spectrum as a function of k.
+    '''
+    if self.k_scale is None:
+      return 1./self.n
+    else:
+      return self.k_scale**-3 * self.__P_iso(k)
+  
   def P_iso(self,a,k=None):
     '''
-    Evaluate n*P_iso(k), i.e. the white noise power spectrum in units of n^-1,
-    where n is the mean number density.
+    Evaluate P_iso(k), the white noise power spectrum.
     
     Parameters:
   
@@ -326,11 +352,11 @@ class Structure(object):
     
     Returns:
       
-      n*P: array
-        Power spectrum as a function of k.
+      P: array
+        (Dimensionful) power spectrum as a function of k.
     '''
     y, Ta, Tb, Tc = self.growth(k=k,a=a)
-    return 1. + 3.*simpson(Ta*Tb*y[None,:]/np.sqrt(1.+y[None,:]),x=np.log(y),axis=1)
+    return self.P0_iso(self.__k) * (1. + 3.*simpson(Ta*Tb*y[None,:]/np.sqrt(1.+y[None,:]),x=np.log(y),axis=1))
   
   def growth_ad(self,a,k=None,dlnDdlny0=None):
     '''

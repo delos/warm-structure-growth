@@ -15,6 +15,10 @@ def moment_f_Maxwell(n):
   is integral |v|^n f(v) d^3v.'''
   return 2.**(0.5*(5+n))*np.pi*gamma(0.5*(3+n))
 
+def norm_ff_Maxwell(u):
+  '''Integral over self-convolution of Maxwell-Boltzmann distribution.'''
+  return np.pi**1.5 * np.exp(-0.25*u**2)
+
 def __fourier_f_uniform_largex(x):
   return 3./x**3 * (np.sin(x)-x*np.cos(x))
 def __fourier_f_uniform_smallx(x):
@@ -43,7 +47,11 @@ def moment_f_uniform(n):
   integral |v|^n f(v) d^3v.'''
   return 4.*np.pi/(3.+n)
 
+def norm_ff_uniform(u):
+  '''Integral over self-convolution of Maxwell-Boltzmann distribution.'''
+  return 6.*np.pi**2 * (0.25*u+1)*(0.5*u-1)**2 * (u<2.)
+
 named_distributions = {
-  'maxwell':{'moment_f':moment_f_Maxwell,'fourier_f':fourier_f_Maxwell,'fourier_ff':fourier_ff_Maxwell},
-  'uniform':{'moment_f':moment_f_uniform,'fourier_f':fourier_f_uniform,'fourier_ff':fourier_ff_uniform},
+  'maxwell':{'moment_f':moment_f_Maxwell,'fourier_f':fourier_f_Maxwell,'fourier_ff':fourier_ff_Maxwell,'norm_ff':norm_ff_Maxwell,},
+  'uniform':{'moment_f':moment_f_uniform,'fourier_f':fourier_f_uniform,'fourier_ff':fourier_ff_uniform,'norm_ff':norm_ff_uniform,},
   }
