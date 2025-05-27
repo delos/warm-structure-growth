@@ -217,7 +217,6 @@ class Structure(object):
       if self.k_scale is not None: # field
         g = 0.5 * self.__k[i] / self.k_scale * self.v_scale
         Tfs = [lambda x: np.cos(g*x)*self.Tfs(x),lambda x: sinc(g*x)*self.Tfs(x),lambda x: self.Tfs2(x,self.__k[i])]
-        #Tfs = [lambda x: self.Tfs(x),lambda x: self.Tfs(x),lambda x: self.Tfs2(x,self.__k[i])]
         self.__Ta[i], self.__Tb[i], self.__Tc[i] = growth_functions(alpha,self.__y,Tfs,iters=self.iters)
       else: # particle
         self.__Ta[i], self.__Tb[i] = growth_functions(alpha,self.__y,self.Tfs,iters=self.iters)
