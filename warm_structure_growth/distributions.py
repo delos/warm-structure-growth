@@ -48,7 +48,7 @@ def moment_f_uniform(n):
   return 4.*np.pi/(3.+n)
 
 def norm_ff_uniform(u):
-  '''Integral over self-convolution of Maxwell-Boltzmann distribution.'''
+  '''Integral over self-convolution of uniform-sphere distribution.'''
   return 6.*np.pi**2 * (0.25*u+1)*(0.5*u-1)**2 * (u<2.)
 
 named_distributions = {
