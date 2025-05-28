@@ -356,7 +356,7 @@ class Structure(object):
         (Dimensionful) power spectrum as a function of k.
     '''
     y, Ta, Tb, Tc = self.growth(k=k,a=a)
-    return self.P0_iso(self.__k) * (1. + 3.*simpson(Ta*Tb*y[None,:]/np.sqrt(1.+y[None,:]),x=np.log(y),axis=1))
+    return self.P0_iso(self.__k) * (1. + 3.*simpson(Tc*Tb*y[None,:]/np.sqrt(1.+y[None,:]),x=np.log(y),axis=1))
   
   def growth_ad(self,a,k=None,dlnDdlny0=None):
     '''
