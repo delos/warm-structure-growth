@@ -37,9 +37,9 @@ def fourier_ff_uniform(x,u):
   Specifically we Fourier transform f(|v+u/2|)f(|v-u/2|).'''
   x,u = np.broadcast_arrays(x,u)
   out = np.zeros(x.shape)
-  small,large = (u<2.)&(x<0.1), (u<2.)&(x>0.1)
+  small,large = (u<2.)&(x<0.1), (u<2.)&(x>=0.1)
   out[small] = __fourier_ff_uniform_smallx(x[small],u[small])
-  out[large] = __fourier_ff_uniform_smallx(x[large],u[large])
+  out[large] = __fourier_ff_uniform_largex(x[large],u[large])
   return out
 
 def moment_f_uniform(n):
