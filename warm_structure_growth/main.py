@@ -182,7 +182,14 @@ class Structure(object):
         print('Using built-in f(v): %s (sigma_eq=%.3e)'%(f,self.sigma))
     else:
       __t = process_time()
-      self.sigma = np.sqrt(moment_f(2,f)/(3*moment_f(0,f)))
+      
+      norm_f = moment_f(0,f)
+      if ~np.isfinite(norm_f):
+        raise Exception('Custom f(v) integrates to %g and cannot be normalized.'%norm_f)
+      self.sigma = np.sqrt(moment_f(2,f)/(3*norm_f))
+      if ~np.isfinite(self.sigma):
+        raise Exception('Custom f(v) gives rise to sigma=%g.'%self.sigma)
+      
       self.__x = np.geomspace(1./max_FT,max_FT,N_ft)/self.sigma
       self.__Tfs = fourier_f(self.__x,f)
       
