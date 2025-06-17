@@ -184,17 +184,17 @@ class Structure(object):
       __t = process_time()
       
       norm_f = moment_f(0,f)
-      if ~np.isfinite(norm_f):
+      if (not np.isfinite(norm_f)) or norm_f == 0.:
         raise Exception('Custom f(v) integrates to %g and cannot be normalized.'%norm_f)
       self.sigma = np.sqrt(moment_f(2,f)/(3*norm_f))
-      if ~np.isfinite(self.sigma):
+      if (not np.isfinite(self.sigma)) or self.sigma == 0.:
         raise Exception('Custom f(v) gives rise to sigma=%g.'%self.sigma)
       
       self.__x = np.geomspace(1./max_FT,max_FT,N_ft)/self.sigma
       self.__Tfs = fourier_f(self.__x,f)
       
       if np.abs(self.__Tfs[0]-1) > 1e-2 or np.abs(self.__Tfs[-1]) > 1e-2:
-        print('Warning: Fourier transformed f(v) ranges from %g to %g. Try increasing max_FT=%g.'%(self.__Tfs[-1],self.__Tfs[0],max_FT))
+        print('Warning: Fourier transformed f(v) ranges from %g to %g (should be 0 to 1). Try increasing max_FT=%g.'%(self.__Tfs[-1],self.__Tfs[0],max_FT))
       
       self.sigma *= self.v_scale
       self.__x /= self.v_scale
