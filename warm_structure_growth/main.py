@@ -257,7 +257,30 @@ class Structure(object):
     if callable(self.__Tfs2):
       return self.__Tfs2(x,u)
     raise NotImplementedError('self-convolution of custom f(v) currently not supported')
+  
+  def k_J(self,a):
+    '''Jeans wavenumber at scale factor a during matter domination.'''
+    return np.sqrt(3*a/self.a_eq)/2. * self.k_eq / self.sigma
+  
+  def P0_iso(self,k):
+    '''
+    Evaluate the white noise power spectrum prior to any gravitational growth.
     
+    Parameters:
+      
+      k: array
+        Wavenumbers in the same units as k_eq.
+    
+    Returns:
+      
+      P: array
+        (Dimensionful) power spectrum as a function of k.
+    '''
+    if self.k_scale is None:
+      return 1./self.n
+    else:
+      return self.k_scale**-3 * self.__P_iso(k)
+  
   def growth(self,a,k=None):
     '''
     Evaluate the growth functions T^(a,b,c)_k(y,y') up to the scale factor a.
@@ -292,57 +315,6 @@ class Structure(object):
     elif k is not None:
       self.__generate_growth(k)
     return self.__y, self.__Ta_interp(a/self.a_eq), self.__Tb_interp(a/self.a_eq), self.__Tc_interp(a/self.a_eq)
-  
-  def growth0(self,a):
-    '''
-    Evaluate the growth functions T^(a,b,c)_k(y,y') up to the scale factor a
-    for a reference case with no velocity dispersion.
-    
-    Parameters:
-      
-      a: float
-        Scale factor at which to evaluate.
-      
-    Returns:
-      
-      y: 1-D array
-        Grid of a/a_eq for integrations
-      
-      Ta: 1-D array
-        T^(a)_k(y,y') as a function of y'
-      
-      Tb: 1-D array
-        T^(b)_k(y,y') as a function of y'
-      
-      Tc: 1-D array
-        T^(c)_k(y,y') as a function of y'
-    '''
-    if self.a_f is None or a > self.a_f:
-      self.__generate_growth(np.zeros(1),a_f=a)
-    return self.__y, self.__Ta0_interp(a/self.a_eq), self.__Tb0_interp(a/self.a_eq), self.__Tc0_interp(a/self.a_eq)
-  
-  def k_J(self,a):
-    '''Jeans wavenumber at scale factor a during matter domination.'''
-    return np.sqrt(3*a/self.a_eq)/2. * self.k_eq / self.sigma
-  
-  def P0_iso(self,k):
-    '''
-    Evaluate the white noise power spectrum prior to any gravitational growth.
-    
-    Parameters:
-      
-      k: array
-        Wavenumbers in the same units as k_eq.
-    
-    Returns:
-      
-      P: array
-        (Dimensionful) power spectrum as a function of k.
-    '''
-    if self.k_scale is None:
-      return 1./self.n
-    else:
-      return self.k_scale**-3 * self.__P_iso(k)
   
   def P_iso(self,a,k=None):
     '''
@@ -392,40 +364,6 @@ class Structure(object):
     y, Ta, Tb, Tc = self.growth(k=k,a=a)
     return Ta[:,0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb[:,0]
   
-  def cutoff_ad(self,a,k=None,dlnDdlny0=None,I2=0.47):
-    '''
-    Evaluate the free-streaming cutoff transfer function for the adiabatic
-    modes, i.e. the ratio between density perturbations with the velocity
-    distribution to without.
-    
-    Parameters:
-  
-      a: float
-        Scale factor at which to evaluate.
-      
-      k: array
-        Wavenumbers in the same units as k_eq. If not specified, we attempt to
-        use the last values (saves time).
-        
-      dlnDdlny0: array
-        The value of d\ln\delta/d\ln a at the initial time, y=y[0], as a
-        function of k. Default 1/ln[sqrt(2) I_2 (k/k_eq) y], with I_2=0.47 as
-        per Hu & Sugiyama (1996).
-      
-      I2: float
-        Parameter in dlnDdlny0; only relevant if dlnDdlny0 is not specified.
-        Default is I2=0.47.
-      
-    Returns:
-      
-      T^ad_k(y,y_0): 1-D array as a function of y.
-    '''
-    if dlnDdlny0 is None:
-      dlnDdlny0 = 1./np.log(np.sqrt(2)*I2*(k if k is not None else self.__k)/self.k_eq*self.a_i/self.a_eq)
-    y, Ta, Tb, Tc = self.growth(k=k,a=a)
-    y, Ta0, Tb0, Tc0 = self.growth0(a=a)
-    return (Ta[:,0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb[:,0])/(Ta0[0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb0[0])
-  
   def P_ad(self,a,k=None,P0=None,dlnDdlny0=None,n_s=0.9649,A_s=2.100e-9,h=0.6736,I1=6.4,I2=0.47):
     '''
     Evaluate P_ad(k), the adiabatic contribution to the matter power spectrum.
@@ -469,3 +407,160 @@ class Structure(object):
     if P0 is None:
       P0 = (I1*np.log(np.sqrt(2)*I2*k1/self.k_eq*self.a_i/self.a_eq))**2 * A_s * (k1/(0.05*h))**(n_s-1)
     return 2*np.pi**2/k1**3 * P0 * self.growth_ad(a,k=k,dlnDdlny0=dlnDdlny0)**2
+  
+  def growth_cold(self,a):
+    '''
+    Evaluate the growth functions T^(a,b,c)_k(y,y') up to the scale factor a
+    for a reference case with no velocity dispersion.
+    
+    Parameters:
+      
+      a: float
+        Scale factor at which to evaluate.
+      
+    Returns:
+      
+      y: 1-D array
+        Grid of a/a_eq for integrations
+      
+      Ta: 1-D array
+        T^(a)(y,y') as a function of y'
+      
+      Tb: 1-D array
+        T^(b)(y,y') as a function of y'
+      
+      Tc: 1-D array
+        T^(c)(y,y') as a function of y'
+    '''
+    if self.a_f is None or a > self.a_f:
+      self.__generate_growth(np.zeros(1),a_f=a)
+    return self.__y, self.__Ta0_interp(a/self.a_eq), self.__Tb0_interp(a/self.a_eq), self.__Tc0_interp(a/self.a_eq)
+
+  def P_iso_cold(self,a,k=None):
+    '''
+    Evaluate P_iso(k), the white noise power spectrum, for a reference case
+    with no velocity dispersion.
+    
+    Parameters:
+  
+      a: float
+        Scale factor at which to evaluate.
+      
+      k: array
+        Wavenumbers in the same units as k_eq. If not specified, we attempt to
+        use the last values (saves time).
+    
+    Returns:
+      
+      P: array
+        (Dimensionful) power spectrum as a function of k.
+    '''
+    y, Ta, Tb, Tc = self.growth_cold(a=a)
+    return self.P0_iso(self.__k) * (1. + 3.*simpson(Tc[None,:]*Tb[None,:]*y[None,:]/np.sqrt(1.+y[None,:]),x=np.log(y),axis=1))
+  
+  def growth_ad_cold(self,a,k=None,dlnDdlny0=None):
+    '''
+    Evaluate T^ad_k(y,y_0), the adiabatic growth function, for a reference case
+    with no velocity dispersion.
+    
+    Parameters:
+  
+      a: float
+        Scale factor at which to evaluate.
+      
+      k: array
+        Wavenumbers in the same units as k_eq. If not specified, we attempt to
+        use the last values (saves time).
+        
+      dlnDdlny0: array
+        The value of d\ln\delta/d\ln a at the initial time, y=y[0], as a
+        function of k. Default 1/ln[sqrt(2) I_2 (k/k_eq) y], with I_2=0.47 as
+        per Hu & Sugiyama (1996).
+      
+    Returns:
+      
+      T^ad_k(y,y_0): 1-D array as a function of k.
+    '''
+    if dlnDdlny0 is None:
+      dlnDdlny0 = 1./np.log(np.sqrt(2)*0.47*(k if k is not None else self.__k)/self.k_eq*self.a_i/self.a_eq)
+    y, Ta, Tb, Tc = self.growth_cold(a=a)
+    return Ta[None,0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb[None,0]
+  
+  def P_ad_cold(self,a,k=None,P0=None,dlnDdlny0=None,n_s=0.9649,A_s=2.100e-9,h=0.6736,I1=6.4,I2=0.47):
+    '''
+    Evaluate P_ad(k), the adiabatic contribution to the matter power spectrum,
+    for a reference case with no velocity dispersion.
+    
+    Parameters:
+  
+      a: float
+        Scale factor at which to evaluate.
+      
+      k: array
+        Wavenumbers in the same units as k_eq. If not specified, we attempt to
+        use the last values (saves time).
+        
+      P0: array
+        The matter power spectrum at the initial time, y=y[0], as a function of
+        k. Default is {I_1 ln[sqrt(2) I_2 (k/k_eq) y]}^2 P_\zeta(k), with
+        I_1=6.4 and I_2=0.47 as per Hu & Sugiyama (1996). Here P_\zeta is
+        the primordial curvature power spectrum set in accordance with the
+        cosmological parameters below.
+        
+      dlnDdlny0: array
+        The value of d\ln\delta/d\ln a at the initial time, y=y[0], as a
+        function of k. Default 1/ln[sqrt(2) I_2 (k/k_eq) y], with I_2=0.47 as
+        per Hu & Sugiyama (1996).
+        
+      n_s=0.9649,A_s=2.100e-9,h: floats
+        Cosmological parameters relevant to the primordial curvature power
+        spectrum. Only relevant if P0 is not specified. Defaults are
+        n_s=0.9649, A_s=2.100e-9, h=0.6736.
+      
+      I1, I2: floats
+        Parameters in P0 and dlnDdlny0; only relevant if they are not specified.
+        Defaults are I1=6.4, I2=0.47.
+    
+    Returns:
+      
+      P: array
+        (Dimensionful) power spectrum as a function of k.
+    '''
+    k1 = (k if k is not None else self.__k)
+    if P0 is None:
+      P0 = (I1*np.log(np.sqrt(2)*I2*k1/self.k_eq*self.a_i/self.a_eq))**2 * A_s * (k1/(0.05*h))**(n_s-1)
+    return 2*np.pi**2/k1**3 * P0 * self.growth_ad_cold(a,k=k,dlnDdlny0=dlnDdlny0)**2
+  
+  def cutoff_ad(self,a,k=None,dlnDdlny0=None,I2=0.47):
+    '''
+    Evaluate the free-streaming cutoff transfer function for the adiabatic
+    modes, i.e. the ratio between density perturbations with the velocity
+    distribution to without.
+    
+    Parameters:
+  
+      a: float
+        Scale factor at which to evaluate.
+      
+      k: array
+        Wavenumbers in the same units as k_eq. If not specified, we attempt to
+        use the last values (saves time).
+        
+      dlnDdlny0: array
+        The value of d\ln\delta/d\ln a at the initial time, y=y[0], as a
+        function of k. Default 1/ln[sqrt(2) I_2 (k/k_eq) y], with I_2=0.47 as
+        per Hu & Sugiyama (1996).
+      
+      I2: float
+        Parameter in dlnDdlny0; only relevant if dlnDdlny0 is not specified.
+        Default is I2=0.47.
+      
+    Returns:
+      
+      T^ad_k(y,y_0): 1-D array as a function of y.
+    '''
+    if dlnDdlny0 is None:
+      dlnDdlny0 = 1./np.log(np.sqrt(2)*I2*(k if k is not None else self.__k)/self.k_eq*self.a_i/self.a_eq)
+    y, Ta, Tb, Tc = self.growth(k=k,a=a)
+    y, Ta0, Tb0, Tc0 = self.growth_cold(a=a)
+    return (Ta[:,0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb[:,0])/(Ta0[0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb0[0])
