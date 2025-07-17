@@ -392,7 +392,7 @@ class Structure(object):
     y, Ta, Tb, Tc = self.growth(k=k,a=a)
     return Ta[:,0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb[:,0]
   
-  def cutoff_ad(self,a,k=None,dlnDdlny0=None):
+  def cutoff_ad(self,a,k=None,dlnDdlny0=None,I2=0.47):
     '''
     Evaluate the free-streaming cutoff transfer function for the adiabatic
     modes, i.e. the ratio between density perturbations with the velocity
@@ -412,12 +412,60 @@ class Structure(object):
         function of k. Default 1/ln[sqrt(2) I_2 (k/k_eq) y], with I_2=0.47 as
         per Hu & Sugiyama (1996).
       
+      I2: float
+        Parameter in dlnDdlny0; only relevant if dlnDdlny0 is not specified.
+        Default is I2=0.47.
+      
     Returns:
       
       T^ad_k(y,y_0): 1-D array as a function of y.
     '''
     if dlnDdlny0 is None:
-      dlnDdlny0 = 1./np.log(np.sqrt(2)*0.47*(k if k is not None else self.__k)/self.k_eq*self.a_i/self.a_eq)
+      dlnDdlny0 = 1./np.log(np.sqrt(2)*I2*(k if k is not None else self.__k)/self.k_eq*self.a_i/self.a_eq)
     y, Ta, Tb, Tc = self.growth(k=k,a=a)
     y, Ta0, Tb0, Tc0 = self.growth0(a=a)
     return (Ta[:,0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb[:,0])/(Ta0[0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb0[0])
+  
+  def P_ad(self,a,k=None,P0=None,dlnDdlny0=None,n_s=0.9649,A_s=2.100e-9,h=0.6736,I1=6.4,I2=0.47):
+    '''
+    Evaluate P_ad(k), the adiabatic contribution to the matter power spectrum.
+    
+    Parameters:
+  
+      a: float
+        Scale factor at which to evaluate.
+      
+      k: array
+        Wavenumbers in the same units as k_eq. If not specified, we attempt to
+        use the last values (saves time).
+        
+      P0: array
+        The matter power spectrum at the initial time, y=y[0], as a function of
+        k. Default is {I_1 ln[sqrt(2) I_2 (k/k_eq) y]}^2 P_\zeta(k), with
+        I_1=6.4 and I_2=0.47 as per Hu & Sugiyama (1996). Here P_\zeta is
+        the primordial curvature power spectrum set in accordance with the
+        cosmological parameters below.
+        
+      dlnDdlny0: array
+        The value of d\ln\delta/d\ln a at the initial time, y=y[0], as a
+        function of k. Default 1/ln[sqrt(2) I_2 (k/k_eq) y], with I_2=0.47 as
+        per Hu & Sugiyama (1996).
+        
+      n_s=0.9649,A_s=2.100e-9,h: floats
+        Cosmological parameters relevant to the primordial curvature power
+        spectrum. Only relevant if P0 is not specified. Defaults are
+        n_s=0.9649, A_s=2.100e-9, h=0.6736.
+      
+      I1, I2: floats
+        Parameters in P0 and dlnDdlny0; only relevant if they are not specified.
+        Defaults are I1=6.4, I2=0.47.
+    
+    Returns:
+      
+      P: array
+        (Dimensionful) power spectrum as a function of k.
+    '''
+    k1 = (k if k is not None else self.__k)
+    if P0 is None:
+      P0 = (I1*np.log(np.sqrt(2)*I2*k1/self.k_eq*self.a_i/self.a_eq))**2 * A_s * (k1/(0.05*h))**(n_s-1)
+    return 2*np.pi**2/k1**3 * P0 * self.growth_ad(a,k=k,dlnDdlny0=dlnDdlny0)**2
