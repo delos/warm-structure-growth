@@ -337,7 +337,7 @@ class Structure(object):
     y, Ta, Tb, Tc = self.growth(k=k,a=a)
     return self.P0_iso(self.__k) * (1. + 3.*simpson(Tc*Tb*y[None,:]/np.sqrt(1.+y[None,:]),x=np.log(y),axis=1))
   
-  def growth_ad(self,a,k=None,dlnDdlny0=None):
+  def growth_ad(self,a,k=None,dlnDdlny0=None,I2=0.47):
     '''
     Evaluate T^ad_k(y,y_0), the adiabatic growth function.
     
@@ -355,12 +355,16 @@ class Structure(object):
         function of k. Default 1/ln[sqrt(2) I_2 (k/k_eq) y], with I_2=0.47 as
         per Hu & Sugiyama (1996).
       
+      I2: float
+        Parameter in dlnDdlny0; only relevant if dlnDdlny0 is not specified.
+        Default is I2=0.47.
+      
     Returns:
       
       T^ad_k(y,y_0): 1-D array as a function of k.
     '''
     if dlnDdlny0 is None:
-      dlnDdlny0 = 1./np.log(np.sqrt(2)*0.47*(k if k is not None else self.__k)/self.k_eq*self.a_i/self.a_eq)
+      dlnDdlny0 = 1./np.log(np.sqrt(2)*I2*(k if k is not None else self.__k)/self.k_eq*self.a_i/self.a_eq)
     y, Ta, Tb, Tc = self.growth(k=k,a=a)
     return Ta[:,0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb[:,0]
   
@@ -406,7 +410,7 @@ class Structure(object):
     k1 = (k if k is not None else self.__k)
     if P0 is None:
       P0 = (I1*np.log(np.sqrt(2)*I2*k1/self.k_eq*self.a_i/self.a_eq))**2 * A_s * (k1/(0.05*h))**(n_s-1)
-    return 2*np.pi**2/k1**3 * P0 * self.growth_ad(a,k=k,dlnDdlny0=dlnDdlny0)**2
+    return 2*np.pi**2/k1**3 * P0 * self.growth_ad(a,k=k,dlnDdlny0=dlnDdlny0,I2=I2)**2
   
   def growth_cold(self,a):
     '''
@@ -458,7 +462,7 @@ class Structure(object):
     y, Ta, Tb, Tc = self.growth_cold(a=a)
     return self.P0_iso(self.__k) * (1. + 3.*simpson(Tc[None,:]*Tb[None,:]*y[None,:]/np.sqrt(1.+y[None,:]),x=np.log(y),axis=1))
   
-  def growth_ad_cold(self,a,k=None,dlnDdlny0=None):
+  def growth_ad_cold(self,a,k=None,dlnDdlny0=None,I2=0.47):
     '''
     Evaluate T^ad_k(y,y_0), the adiabatic growth function, for a reference case
     with no velocity dispersion.
@@ -477,12 +481,16 @@ class Structure(object):
         function of k. Default 1/ln[sqrt(2) I_2 (k/k_eq) y], with I_2=0.47 as
         per Hu & Sugiyama (1996).
       
+      I2: float
+        Parameter in dlnDdlny0; only relevant if dlnDdlny0 is not specified.
+        Default is I2=0.47.
+      
     Returns:
       
       T^ad_k(y,y_0): 1-D array as a function of k.
     '''
     if dlnDdlny0 is None:
-      dlnDdlny0 = 1./np.log(np.sqrt(2)*0.47*(k if k is not None else self.__k)/self.k_eq*self.a_i/self.a_eq)
+      dlnDdlny0 = 1./np.log(np.sqrt(2)*I2*(k if k is not None else self.__k)/self.k_eq*self.a_i/self.a_eq)
     y, Ta, Tb, Tc = self.growth_cold(a=a)
     return Ta[None,0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb[None,0]
   
@@ -559,8 +567,4 @@ class Structure(object):
       
       T^ad_k(y,y_0): 1-D array as a function of y.
     '''
-    if dlnDdlny0 is None:
-      dlnDdlny0 = 1./np.log(np.sqrt(2)*I2*(k if k is not None else self.__k)/self.k_eq*self.a_i/self.a_eq)
-    y, Ta, Tb, Tc = self.growth(k=k,a=a)
-    y, Ta0, Tb0, Tc0 = self.growth_cold(a=a)
-    return (Ta[:,0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb[:,0])/(Ta0[0] + dlnDdlny0*np.sqrt(1.+y[0])*Tb0[0])
+    return self.growth_ad(a,k=k,dlnDdlny0=dlnDdlny0,I2=I2)/self.growth_ad_cold(a,k=k,dlnDdlny0=dlnDdlny0,I2=I2)
