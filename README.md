@@ -25,7 +25,7 @@ structure = warm_structure_growth.Structure(
     )
 ```
 
-Note that the velocity distribution can alternatively be supplied as a table and passed as `f=(v,f)`, where `v` and `f` are arrays. See the docstring (`help(warm_structure_growth.Structure)` or in [main.py](warm_structure_growth/main.py)) for further options. Now we can evaluate the transfer function for adiabatic modes:
+The velocity distribution can alternatively be supplied as a table and passed as `f=(v,f)`, where `v` and `f` are arrays, or chosen from a set of built-in analytic distributions by passing a string, such as `"maxwell"`. Field (wave dark matter) calculations currently only support the built-in distributions. See the docstring (`help(warm_structure_growth.Structure)` or in [main.py](warm_structure_growth/main.py)) for further options. Now we can evaluate the transfer function for adiabatic modes:
 
 ```
 k = numpy.geomspace(1,1e4,30)
@@ -39,6 +39,10 @@ P = structure.P_iso(a=1.,k=k) # this is n*P, where n is the number density
 ```
 
 Wavenumbers are in units of 1/Mpc by default, but this can be changed by specifying a custom `k_eq` when instantiating `warm_structure_growth.Structure`. The unit of `k` will be the same as the unit of `k_eq`.
+
+### Advanced usage
+
+`n` (number density) is only relevant in particle mode. To use field mode (wave dark matter), instead pass `m` (field mass) or `k_scale` (characteristic field momentum), or both, in which case `v_scale` is ignored. `m` and `k_scale` are in the same units as `k_eq`. Note that field calculations currently only support the built-in distributions.
 
 ## Requirements:
 

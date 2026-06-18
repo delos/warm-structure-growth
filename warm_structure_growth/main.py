@@ -92,12 +92,16 @@ class Structure(object):
       - As a table (v,f), where v and f are 1-D arrays.
       - As a callable, f(v).
       - As a string corresponding to a supported named distribution. Supported
-        distributions are "Maxwell" (Maxwell-Boltzmann) and "uniform" (uniform
-        sphere).
-    
+        distributions are "Maxwell" (Maxwell-Boltzmann, f~exp(-v^2/2)), "uniform"
+        (uniform sphere), "exponential" (f~exp(-v)), "parabolic" (Epanechnikov,
+        f~(1-v^2) for v<1), and "powerlaw" (f~(1+v^2)^-3, power-law tails). All
+        named distributions are normalized to unit variance, so v_scale equals
+        the velocity dispersion sigma.
+
     v_scale: float
       Rescale velocities so that the velocity distribution is f(v/v_scale).
-      Default is v_scale=1.
+      Default is v_scale=1. The named distributions are registered at unit
+      variance, so for them v_scale is exactly the velocity dispersion sigma.
     
     v_at_init: bool
       If True, velocities are specified (via f and v_scale) at the initial time
