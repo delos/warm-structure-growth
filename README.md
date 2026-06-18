@@ -43,7 +43,7 @@ Wavenumbers are in units of 1/Mpc by default, but this can be changed by specify
 
 ### Advanced usage
 
-`n` (number density) is only relevant in particle mode. To use field mode (wave dark matter), instead pass `m` (field mass) or `k_scale` (characteristic field momentum), or both, in which case `v_scale` is ignored. `m` and `k_scale` are in the same units as `k_eq`. Note that field calculations currently only support the built-in distributions.
+`n` (number density) is only relevant in particle mode. To use field mode (wave dark matter), instead pass `m` (field mass) or `k_scale` (characteristic field momentum), or both, in which case `v_scale` is ignored. `m` and `k_scale` are in the same units as `k_eq`. Note that field calculations currently only support the built-in analytic distributions.
 
 ## Requirements:
 
@@ -51,4 +51,4 @@ This code requires Python with the `numpy` and `scipy` packages.
 
 ## Acknowledgement:
 
-If you use the code, please cite the paper [Amin et al. (2025)](https://arxiv.org/abs/2503.20881).
+If you use the code, please cite the paper [Amin, Delos, & Mirbabayi (2025)](https://arxiv.org/abs/2503.20881). For field mode, also cite [Amin, May, & Mirbabayi (2025)](https://arxiv.org/abs/2506.12131).
