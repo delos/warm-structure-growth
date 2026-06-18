@@ -22,6 +22,7 @@ structure = warm_structure_growth.Structure(
     a_i = 3e-7, # scale factor at which we start nonrelativistic free streaming
     f = lambda v: numpy.exp(-v**2/2), # Maxwell-Boltzmann velocity distribution
     v_scale = 7e-5, # scale velocity at matter-radiation equality, in units of c
+    n = 5e7, # particle number density in Mpc^-1
     )
 ```
 
