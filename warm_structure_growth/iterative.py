@@ -37,28 +37,38 @@ def growth_functions(ak,y,Tfs,iters=15):
   '''
   
   F = np.log(y/(1.+np.sqrt(1.+y))**2)
-  
+
   if callable(Tfs):
     Tfs = [Tfs]*2
-  
+
+  # The integral  int dy'' Q(y,y'') R(y'',y') [y''/sqrt(1+y'')]  with Simpson's
+  # rule on the (uniform) ln(y) grid is a linear functional of the samples, so
+  # it equals a matrix product  (Q * w) @ R  where w_j are the combined Simpson
+  # weight and measure at node j. We obtain the exact Simpson weights once (the
+  # rule's action on the basis vectors) so this reproduces scipy.simpson while
+  # using a single BLAS dgemm.
+  lny = np.log(y)
+  w = simpson(np.eye(len(y)),x=lny,axis=1) * (y/np.sqrt(1.+y))
+
+  dF = F[:,None]-F[None]
+
   # prepare T^(b,0)
-  # aray shape: y, y' (latest to earliest)
+  # array shape: y, y' (latest to earliest)
   Tfs_ = Tfs[1]
-  Tb0 = np.tril((F[:,None]-F[None])*Tfs_(ak*(F[:,None]-F[None])))
+  Tb0 = np.tril(dF*Tfs_(ak*dF))
   np.fill_diagonal(Tb0,0.) # in case Tfs is not well behaved at 0
-  
+
   # start iteration for T^(b)
-  # integrand shape is y, y'', y' (latest to earliest)
   Tb = Tb0
-  measure = y[None,:,None]/np.sqrt(1.+y[None,:,None])
   for i in range(iters-1):
-    Tb = Tb0 + 1.5*simpson(Tb[:,:,None]*Tb0[None]*measure,x=np.log(y),axis=1)
-  
+    Tb = Tb0 + 1.5*((Tb*w)@Tb0)
+
   # evaluate T^(a,...)
+  Tbw = Tb*w
   Ta = []
   for Tfs_ in Tfs[:1] + Tfs[2:]:
-    Ta0 = np.tril(Tfs_(ak*(F[:,None]-F[None])))
+    Ta0 = np.tril(Tfs_(ak*dF))
     np.fill_diagonal(Ta0,1.) # in case Tfs is not well behaved at 0
-    Ta += [Ta0 + 1.5*simpson(Tb[:,:,None]*Ta0[None]*measure,x=np.log(y),axis=1)]
-  
+    Ta += [Ta0 + 1.5*(Tbw@Ta0)]
+
   return tuple(Ta[:1] + [Tb] + Ta[1:])

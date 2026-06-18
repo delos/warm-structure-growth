@@ -127,11 +127,15 @@ def __fourier_ff_exponential_largex(x,u):
 def fourier_ff_exponential(x,u):
   '''Fourier transform of self-convolution of exponential distribution.
   Specifically we Fourier transform f(|v+u/2|)f(|v-u/2|).'''
-  x,u = np.broadcast_arrays(np.asarray(x,dtype=float),np.asarray(u,dtype=float))
+  u0 = np.asarray(u,dtype=float)
+  x,ub = np.broadcast_arrays(np.asarray(x,dtype=float),u0)
   out = np.empty(x.shape)
   small = x < 0.7
-  out[small] = __fourier_ff_exponential_smallx(x[small],u[small])
-  out[~small] = __fourier_ff_exponential_largex(x[~small],u[~small])
+  # u is scalar in the growth-function calls; then the u-dependent coefficients
+  # are computed once (as floats) instead of redundantly across the array.
+  us,ul = (float(u0),float(u0)) if u0.ndim==0 else (ub[small],ub[~small])
+  out[small] = __fourier_ff_exponential_smallx(x[small],us)
+  out[~small] = __fourier_ff_exponential_largex(x[~small],ul)
   return out
 
 # ========================= parabolic (Epanechnikov) ========================
@@ -172,11 +176,13 @@ def __fourier_ff_parabolic_largex(x,u):
 def fourier_ff_parabolic(x,u):
   '''Fourier transform of self-convolution of parabolic distribution.
   Specifically we Fourier transform f(|v+u/2|)f(|v-u/2|).'''
-  x,u = np.broadcast_arrays(np.asarray(x,dtype=float),np.asarray(u,dtype=float))
+  u0 = np.asarray(u,dtype=float)
+  x,ub = np.broadcast_arrays(np.asarray(x,dtype=float),u0)
   out = np.zeros(x.shape)
-  small,large = (u<2.)&(x<0.5), (u<2.)&(x>=0.5)
-  out[small] = __fourier_ff_parabolic_smallx(x[small],u[small])
-  out[large] = __fourier_ff_parabolic_largex(x[large],u[large])
+  small,large = (ub<2.)&(x<0.5), (ub<2.)&(x>=0.5)
+  us,ul = (float(u0),float(u0)) if u0.ndim==0 else (ub[small],ub[large])
+  out[small] = __fourier_ff_parabolic_smallx(x[small],us)
+  out[large] = __fourier_ff_parabolic_largex(x[large],ul)
   return out
 
 # ============================ power-law tails ==============================
@@ -199,16 +205,25 @@ def norm_ff_powerlaw(u):
 __pl_gl_x,__pl_gl_w = laggauss(64)
 def __pl_psi_over_pi(s,u,x):
   # = NUM/den, where the self-convolution FT integrand is pi*(NUM/den)*exp(-s*x);
-  # s runs over [1,inf), the radial prolate-spheroidal coordinate.
+  # s runs over [1,inf), the radial prolate-spheroidal coordinate. NUM is a
+  # 9th-order polynomial in s (coefficients in u,x); evaluated by Horner. The
+  # denominator factors as 4 s^5 u^5 (4 s^2 + u^2)^5.
   c = np.cos(u*x/2.); si = np.sin(u*x/2.)
-  NUM = (-128.*s**9*u**2*x**2*si - 768.*s**9*u*x*c + 1536.*s**9*si
-         - 192.*s**8*u**3*x**2*c + 384.*s**8*u**2*x*si + 32.*s**7*u**4*x**2*si
-         - 1152.*s**7*u**3*x*c + 2304.*s**7*u**2*si - 80.*s**6*u**5*x**2*c
-         + 1056.*s**6*u**4*x*si + 40.*s**5*u**6*x**2*si + 2016.*s**5*u**4*si
-         - 4.*s**4*u**7*x**2*c + 264.*s**4*u**6*x*si + 1008.*s**4*u**5*c
-         + 6.*s**3*u**8*x**2*si + 72.*s**3*u**7*x*c + s**2*u**9*x**2*c
-         + 6.*s**2*u**8*x*si + 72.*s**2*u**7*c + 3.*s*u**9*x*c + 3.*u**9*c)
-  den = 4.*s**5*u**5*(1024.*s**10+1280.*s**8*u**2+640.*s**6*u**4+160.*s**4*u**6+20.*s**2*u**8+u**10)
+  u2=u*u; u3=u2*u; u4=u2*u2; u5=u4*u; u6=u3*u3; u7=u4*u3; u8=u4*u4; u9=u8*u
+  x2=x*x
+  a0 = 3.*u9*c
+  a1 = 3.*u9*x*c
+  a2 = u9*x2*c + 6.*u8*x*si + 72.*u7*c
+  a3 = 6.*u8*x2*si + 72.*u7*x*c
+  a4 = -4.*u7*x2*c + 264.*u6*x*si + 1008.*u5*c
+  a5 = 40.*u6*x2*si + 2016.*u4*si
+  a6 = -80.*u5*x2*c + 1056.*u4*x*si
+  a7 = 32.*u4*x2*si - 1152.*u3*x*c + 2304.*u2*si
+  a8 = -192.*u3*x2*c + 384.*u2*x*si
+  a9 = -128.*u2*x2*si - 768.*u*x*c + 1536.*si
+  NUM = a0+s*(a1+s*(a2+s*(a3+s*(a4+s*(a5+s*(a6+s*(a7+s*(a8+s*a9))))))))
+  s2 = s*s
+  den = 4.*s2*s2*s*u5*(4.*s2+u2)**5
   return NUM/den
 def __fourier_ff_powerlaw_smallx(x,u):
   c1 = (-u**4/8.-u**2-2.)/(u**2+28.)
@@ -221,20 +236,26 @@ def __fourier_ff_powerlaw_largex(x,u):
   # G(x,u) = integral_1^inf 2 pi s pi (NUM/den) exp(-s x) ds, via s = 1 + w/x and
   # Gauss-Laguerre quadrature; normalized by the raw self-convolution C(u).
   s = 1. + __pl_gl_x[:,None]/x[None,:]
-  integ = 2.*np.pi*s*np.pi*__pl_psi_over_pi(s,u[None,:],x[None,:])
+  ub = u if np.ndim(u)==0 else u[None,:]
+  integ = 2.*np.pi*s*np.pi*__pl_psi_over_pi(s,ub,x[None,:])
   G = np.exp(-x)/x*np.sum(__pl_gl_w[:,None]*integ,axis=0)
   C = np.pi**2*(u**2+28.)/(2.*(u**2+4.)**4)
   return G/C
 def fourier_ff_powerlaw(x,u):
   '''Fourier transform of self-convolution of power-law distribution.
   Specifically we Fourier transform f(|v+u/2|)f(|v-u/2|).'''
-  x,u = np.broadcast_arrays(np.asarray(x,dtype=float),np.asarray(u,dtype=float))
+  u0 = np.asarray(u,dtype=float)
+  x,ub = np.broadcast_arrays(np.asarray(x,dtype=float),u0)
   shape = x.shape
-  x,u = x.ravel(),u.ravel()
+  x = x.ravel()
   out = np.empty(x.shape)
   small = x < 0.6
-  out[small] = __fourier_ff_powerlaw_smallx(x[small],u[small])
-  out[~small] = __fourier_ff_powerlaw_largex(x[~small],u[~small])
+  if u0.ndim==0:
+    us = ul = float(u0)
+  else:
+    ub = ub.ravel(); us,ul = ub[small],ub[~small]
+  out[small] = __fourier_ff_powerlaw_smallx(x[small],us)
+  out[~small] = __fourier_ff_powerlaw_largex(x[~small],ul)
   return out.reshape(shape)
 
 # =============================== registration ==============================
